@@ -9,7 +9,7 @@ A read-only PowerShell reporting tool that helps Microsoft Entra administrators 
 The script combines authentication-method registration data with observed sign-in authentication steps, then produces CSV reports, an executive HTML summary, and a machine-readable manifest.
 
 > [!IMPORTANT]
-> The generated reports contain identity and authentication-usage data. Store them securely, restrict access, and never comMIT real tenant reports to source control.
+> The generated reports contain identity and authentication-usage data. Store them securely, restrict access, and never commit real tenant reports to source control.
 
 ## What it does
 
@@ -127,7 +127,7 @@ Authentication method details can contain personal information, such as a partia
 
 Treat these priorities as investigation guidance rather than automated remediation decisions. Validate each user's sign-in and recovery journeys before changing policy or removing a method.
 
-## Data interpretation and liMITations
+## Data interpretation and limitations
 
 - Authentication policy scope, method registration, and observed method use are different measurements.
 - Registration reporting can be delayed by up to 36 hours and excludes disabled users.
@@ -173,6 +173,6 @@ Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before openin
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the [LHIT License](LICENSE).
 
 Microsoft, Microsoft Entra, and Microsoft Graph are trademarks of the Microsoft group of companies. This project is independently maintained and is not an official Microsoft product.
