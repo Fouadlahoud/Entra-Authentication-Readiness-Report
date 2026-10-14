@@ -12,6 +12,12 @@ Uses read-only Microsoft Graph reporting APIs to collect:
 - Successful and failed SMS/voice usage.
 - A prioritized SMS/voice migration action list.
 
+Risk is assigned from observed telephony use, administrator status, and the
+registered methods: a user is treated as phishing-resistant only when FIDO2,
+a device-bound passkey, or Windows Hello for Business is registered, and as
+having a non-phone fallback when any Authenticator, OTP, or phishing-resistant
+method is registered.
+
 The script creates CSV files, an HTML summary, and a JSON manifest. Sign-in
 queries are split into time windows to reduce Graph timeouts on larger tenants.
 
@@ -123,6 +129,12 @@ Registration reporting can be delayed by up to 36 hours and excludes disabled
 users. A sign-in whose MFA requirement was satisfied by a previous token claim
 does not prove that the user performed a new SMS or voice challenge during that
 event.
+
+Live mode reads interactive user sign-ins. SMS and voice challenges occur in
+interactive sign-ins, so coverage is complete for this purpose, but the counts
+do not include non-interactive or service principal sign-ins. Telephony steps
+are recognised by name (SMS, Text message, Voice, Voice call, Phone call); a
+warning is written if steps were processed but none matched.
 #>
 
 [CmdletBinding(DefaultParameterSetName = 'Live')]
@@ -317,6 +329,82 @@ function Test-PhoneRegistration {
     return $false
 }
 
+function Test-PhishingResistantRegistration {
+    param(
+        [string[]]$MethodsRegistered
+    )
+
+    # Registered methods that are phishing-resistant: FIDO2 security keys,
+    # device-bound passkeys, and Windows Hello for Business.
+    $phishingResistantMethods = @(
+        'fido2SecurityKey'
+        'passKeyDeviceBound'
+        'passKeyDeviceBoundAuthenticator'
+        'passKeyDeviceBoundWindowsHello'
+        'windowsHelloForBusiness'
+    )
+    foreach ($method in @($MethodsRegistered)) {
+        if ($phishingResistantMethods -contains $method) {
+            return $true
+        }
+    }
+
+    return $false
+}
+
+function Test-StrongNonPhoneRegistration {
+    param(
+        [string[]]$MethodsRegistered
+    )
+
+    # Registered methods that can satisfy MFA without telephony. These are not
+    # necessarily phishing-resistant, but they mean the user is not dependent on
+    # SMS or voice to sign in.
+    $strongMethods = @(
+        'fido2SecurityKey'
+        'passKeyDeviceBound'
+        'passKeyDeviceBoundAuthenticator'
+        'passKeyDeviceBoundWindowsHello'
+        'windowsHelloForBusiness'
+        'microsoftAuthenticatorPush'
+        'microsoftAuthenticatorPasswordless'
+        'softwareOneTimePasscode'
+        'hardwareOneTimePasscode'
+    )
+    foreach ($method in @($MethodsRegistered)) {
+        if ($strongMethods -contains $method) {
+            return $true
+        }
+    }
+
+    return $false
+}
+
+function Get-TelephonyMethodType {
+    param(
+        [AllowNull()]
+        [string]$AuthenticationMethod
+    )
+
+    # Sign-in log authenticationMethod values vary between Graph versions and
+    # tenants ("SMS", "Text message", "Voice", "Voice call", "Phone call",
+    # "Mobile phone call", "Office phone call"). Match on substrings so the
+    # report doesn't silently miss telephony usage.
+    if ([string]::IsNullOrWhiteSpace($AuthenticationMethod)) {
+        return $null
+    }
+
+    if ($AuthenticationMethod -match '(?i)\bsms\b|text message') {
+        return 'Sms'
+    }
+
+    if ($AuthenticationMethod -match '(?i)\bvoice\b|phone call') {
+        return 'Voice'
+    }
+
+    return $null
+}
+
 function Test-PhonePreference {
     param(
         [AllowNull()]
@@ -503,7 +591,8 @@ function Add-SignInRecord {
         Add-SetValue -Set $methodSummary.Users -Value $userKey
         Add-SetValue -Set $methodSummary.Applications -Value $application
 
-        if ($method -ieq 'SMS' -or $method -ieq 'Voice') {
+        $telephonyType = Get-TelephonyMethodType -AuthenticationMethod $method
+        if ($null -ne $telephonyType) {
             if (-not $PhoneStatistics.ContainsKey($userKey)) {
                 $PhoneStatistics[$userKey] = [pscustomobject]@{
                     UserKey          = $userKey
@@ -525,9 +614,8 @@ function Add-SignInRecord {
             }
 
             $phone = $PhoneStatistics[$userKey]
-            $methodPrefix = if ($method -ieq 'SMS') { 'Sms' } else { 'Voice' }
-            $attemptProperty = "${methodPrefix}Attempts"
-            $resultProperty = "${methodPrefix}${countProperty}"
+            $attemptProperty = "${telephonyType}Attempts"
+            $resultProperty = "${telephonyType}${countProperty}"
             $phone.$attemptProperty = [int]$phone.$attemptProperty + 1
             $phone.$resultProperty = [int]$phone.$resultProperty + 1
             Measure-DateRange -Statistics $phone -EventDate $eventDate
@@ -554,6 +642,7 @@ function Add-SignInRecord {
                 IsInteractive             = $isInteractive
                 AuthenticationMethod      = $method
                 AuthenticationStepCategory = if ($method -in @('Satisfied by token', 'Previously satisfied')) { 'PreviouslySatisfied' } elseif ($method -eq 'Unknown') { 'Unknown' } else { 'RecordedMethod' }
+                TelephonyType             = if ($null -ne $telephonyType) { $telephonyType.ToUpperInvariant() } else { '' }
                 MethodDetail              = $methodDetail
                 Requirement               = [string](Get-PropertyValue -InputObject $step -Name 'AuthenticationStepRequirement' -DefaultValue '')
                 ResultState               = $resultState
@@ -767,6 +856,8 @@ function ConvertTo-MigrationActionRow {
     $displayName = if ($registrationFound) { $Registration.UserDisplayName } elseif ($phoneUsageFound) { $PhoneUsage.UserDisplayName } else { '' }
     $isAdmin = if ($registrationFound) { [bool]$Registration.IsAdmin } else { $false }
     $isPasswordlessCapable = if ($registrationFound) { [bool]$Registration.IsPasswordlessCapable } else { $false }
+    $phishingResistantRegistered = if ($registrationFound) { [bool]$Registration.PhishingResistantRegistered } else { $false }
+    $strongNonPhoneRegistered = if ($registrationFound) { [bool]$Registration.StrongNonPhoneRegistered } else { $false }
     $phoneRegistered = if ($registrationFound) { [bool]$Registration.PhoneRegistered } else { $false }
     $phonePreferred = if ($registrationFound) { [bool]$Registration.PhonePreferred } else { $false }
     $methodsRegistered = if ($registrationFound) { $Registration.MethodsRegistered -join ';' } else { '' }
@@ -780,24 +871,38 @@ function ConvertTo-MigrationActionRow {
     $voiceFailed = if ($phoneUsageFound) { [int]$PhoneUsage.VoiceFailed } else { 0 }
     $successfulPhoneUses = $smsSuccessful + $voiceSuccessful
 
+    # Risk tiers. "Phishing-resistant" is judged from the registered methods
+    # (FIDO2, device-bound passkey, Windows Hello for Business), not from the
+    # IsPasswordlessCapable flag, because Authenticator phone sign-in is
+    # passwordless but not phishing-resistant. "Strong non-phone" means any
+    # registered MFA method that does not depend on telephony.
+    $phoneInScope = $phoneRegistered -or $phonePreferred
     $risk = 'Low'
-    $recommendedAction = 'Monitor usage and consider removing phone methods when there is no business requirement.'
+    $recommendedAction = 'Monitor usage and remove the registered phone methods when there is no business requirement.'
 
-    if ($successfulPhoneUses -gt 0 -and -not $isPasswordlessCapable) {
+    if ($isAdmin -and $successfulPhoneUses -gt 0) {
+        $risk = 'Critical'
+        $recommendedAction = 'Administrator actively using SMS/voice. Enroll and validate two phishing-resistant credentials, then remove the phone methods.'
+    }
+    elseif ($successfulPhoneUses -gt 0 -and -not $phishingResistantRegistered) {
         $risk = 'Critical'
         $recommendedAction = 'Register and validate a phishing-resistant method, test recovery, then remove SMS/voice dependency.'
     }
-    elseif ($isAdmin -and $successfulPhoneUses -gt 0) {
+    elseif ($isAdmin -and $phoneInScope -and -not $phishingResistantRegistered) {
         $risk = 'High'
-        $recommendedAction = 'Prioritize this administrator, validate two phishing-resistant credentials, and stop SMS/voice use.'
+        $recommendedAction = 'Administrator with phone methods and no phishing-resistant credential. Enroll FIDO2 or a passkey before removing SMS/voice.'
     }
-    elseif (($phoneRegistered -or $phonePreferred) -and -not $isPasswordlessCapable) {
+    elseif ($phoneInScope -and -not $strongNonPhoneRegistered) {
         $risk = 'High'
-        $recommendedAction = 'Enroll a phishing-resistant method and validate the normal and recovery sign-in journeys.'
+        $recommendedAction = 'Phone is the only registered MFA method. Enroll a phishing-resistant method and validate the normal and recovery sign-in journeys.'
     }
     elseif ($successfulPhoneUses -gt 0) {
         $risk = 'Medium'
-        $recommendedAction = 'Validate the existing passwordless method, then remove SMS/voice as a routine sign-in option.'
+        $recommendedAction = 'Validate the existing phishing-resistant method, then remove SMS/voice as a routine sign-in option.'
+    }
+    elseif ($phonePreferred -and -not $phishingResistantRegistered) {
+        $risk = 'Medium'
+        $recommendedAction = 'Phone is the preferred method but a non-phone fallback exists. Change the default to Authenticator or enroll a phishing-resistant method, then remove the phone methods.'
     }
 
     $dataQualityNote = ''
@@ -817,6 +922,8 @@ function ConvertTo-MigrationActionRow {
         UserPreferredMethod         = $userPreferred
         SystemPreferredMethods      = $systemPreferred
         IsPasswordlessCapable       = $isPasswordlessCapable
+        PhishingResistantRegistered = $phishingResistantRegistered
+        StrongNonPhoneRegistered    = $strongNonPhoneRegistered
         SmsAttempts                 = $smsAttempts
         SmsSuccessful               = $smsSuccessful
         SmsFailed                   = $smsFailed
@@ -902,8 +1009,6 @@ else {
 
 $reportStartUtc = $reportEndUtc.AddDays(-$LookbackDays)
 $registrationRecords = [System.Collections.Generic.List[object]]::new()
-$registrationById = @{}
-$registrationByUpn = @{}
 
 foreach ($registrationItem in $registrationSource) {
     $methodsRegistered = @(
@@ -935,17 +1040,12 @@ foreach ($registrationItem in $registrationSource) {
         SystemPreferredMethods      = $systemPreferredMethods
         PhoneRegistered             = $phoneRegistered
         PhonePreferred              = $phonePreferred
+        PhishingResistantRegistered = Test-PhishingResistantRegistration -MethodsRegistered $methodsRegistered
+        StrongNonPhoneRegistered    = Test-StrongNonPhoneRegistration -MethodsRegistered $methodsRegistered
         LastUpdatedDateTime         = ConvertTo-UtcDateTime -Value (Get-PropertyValue -InputObject $registrationItem -Name 'LastUpdatedDateTime')
     }
 
     [void]$registrationRecords.Add($record)
-
-    if (-not [string]::IsNullOrWhiteSpace($userId)) {
-        $registrationById[$userId] = $record
-    }
-    if (-not [string]::IsNullOrWhiteSpace($upn)) {
-        $registrationByUpn[$upn] = $record
-    }
 }
 
 Write-Verbose ("Processing sign-ins from {0} to {1}..." -f (Format-UtcDateTime $reportStartUtc), (Format-UtcDateTime $reportEndUtc))
@@ -977,6 +1077,7 @@ if ($inputMode -eq 'Offline') {
 }
 else {
     $windowStart = $reportStartUtc
+    $earliestSignInUtc = $null
     while ($windowStart -lt $reportEndUtc) {
         $windowEnd = $windowStart.AddHours($WindowHours)
         if ($windowEnd -gt $reportEndUtc) {
@@ -997,6 +1098,10 @@ else {
         }
         catch {
             throw "Failed to retrieve sign-ins for $filter. $($_.Exception.Message)"
+        }
+
+        if ($null -eq $earliestSignInUtc -and $signInBatch.Count -gt 0) {
+            $earliestSignInUtc = $windowStart
         }
 
         $eventBuffer = [System.Collections.Generic.List[object]]::new()
@@ -1020,6 +1125,28 @@ else {
     }
 
     Write-Progress -Activity 'Retrieving Microsoft Entra sign-ins' -Completed
+
+    if ($counters.SignInsProcessed -eq 0) {
+        Write-Warning (
+            "No sign-ins were returned for the requested period. Confirm the account can read sign-in logs " +
+            "and that the tenant retains sign-in data for the requested lookback."
+        )
+    }
+    elseif ($LookbackDays -gt 7 -and $null -ne $earliestSignInUtc -and $earliestSignInUtc -ge $reportEndUtc.AddDays(-7)) {
+        Write-Warning (
+            "Sign-in data was only returned for the most recent 7 days although {0} days were requested. " +
+            "The tenant is likely on Microsoft Entra ID Free (7-day sign-in retention); usage counts cover " +
+            "a shorter period than the report period."
+        ) -f $LookbackDays
+    }
+
+    if ($counters.AuthenticationStepsProcessed -gt 0 -and $phoneStatistics.Count -eq 0) {
+        $observedMethods = @($methodStatistics.Values | ForEach-Object { $_.Method } | Sort-Object)
+        Write-Warning (
+            "No SMS or voice authentication steps were recognised. Observed method names: {0}. " +
+            "If any of these are telephony methods, open an issue so the matching can be extended."
+        ) -f ($observedMethods -join ', ')
+    }
 }
 
 $registrationInventory = @(
@@ -1039,6 +1166,8 @@ $registrationInventory = @(
                 IsSsprCapable          = $_.IsSsprCapable
                 PhoneRegistered        = $_.PhoneRegistered
                 PhonePreferred         = $_.PhonePreferred
+                PhishingResistantRegistered = $_.PhishingResistantRegistered
+                StrongNonPhoneRegistered    = $_.StrongNonPhoneRegistered
                 MethodsRegistered      = $_.MethodsRegistered -join ';'
                 UserPreferredMethod    = $_.UserPreferredMethod
                 SystemPreferredMethods = $_.SystemPreferredMethods -join ';'
@@ -1141,9 +1270,9 @@ $successfulPhoneUsers = @(
     $phoneStatistics.Values |
         Where-Object { ($_.SmsSuccessful + $_.VoiceSuccessful) -gt 0 }
 ).Count
-$activePhoneUsersNotPasswordless = @(
+$activePhoneUsersNoPhishingResistant = @(
     $sortedMigrationActions |
-        Where-Object { $_.SuccessfulPhoneUses -gt 0 -and -not $_.IsPasswordlessCapable }
+        Where-Object { $_.SuccessfulPhoneUses -gt 0 -and -not $_.PhishingResistantRegistered }
 ).Count
 $adminPhoneUsers = @(
     $sortedMigrationActions |
@@ -1163,12 +1292,12 @@ $executiveSummary = @(
     [pscustomobject]@{ Metric = 'Users with successful SMS use'; Value = $successfulSmsUsers; Meaning = 'Users with at least one successful SMS authentication step in the report period.' }
     [pscustomobject]@{ Metric = 'Users with successful voice use'; Value = $successfulVoiceUsers; Meaning = 'Users with at least one successful voice authentication step in the report period.' }
     [pscustomobject]@{ Metric = 'Users with successful SMS or voice use'; Value = $successfulPhoneUsers; Meaning = 'Distinct users with successful observed telephony authentication.' }
-    [pscustomobject]@{ Metric = 'Active phone users not passwordless-capable'; Value = $activePhoneUsersNotPasswordless; Meaning = 'Highest-priority migration population.' }
+    [pscustomobject]@{ Metric = 'Active phone users without a phishing-resistant method'; Value = $activePhoneUsersNoPhishingResistant; Meaning = 'Users with successful SMS or voice use and no FIDO2, passkey, or Windows Hello for Business registration. Highest-priority migration population.' }
     [pscustomobject]@{ Metric = 'Administrators with successful phone use'; Value = $adminPhoneUsers; Meaning = 'Privileged users observed successfully using SMS or voice.' }
-    [pscustomobject]@{ Metric = 'Critical migration actions'; Value = $criticalCount; Meaning = 'Successful phone use and no reported passwordless capability.' }
-    [pscustomobject]@{ Metric = 'High migration actions'; Value = $highCount; Meaning = 'Administrator phone use, or phone registered/preferred without passwordless capability.' }
-    [pscustomobject]@{ Metric = 'Medium migration actions'; Value = $mediumCount; Meaning = 'Successful phone use with an existing passwordless-capable method.' }
-    [pscustomobject]@{ Metric = 'Low migration actions'; Value = $lowCount; Meaning = 'Phone registered or preferred without successful phone use in this period.' }
+    [pscustomobject]@{ Metric = 'Critical migration actions'; Value = $criticalCount; Meaning = 'Administrators with successful phone use, or successful phone use without a phishing-resistant method.' }
+    [pscustomobject]@{ Metric = 'High migration actions'; Value = $highCount; Meaning = 'Phone is the only registered MFA method, or an administrator has phone methods and no phishing-resistant credential.' }
+    [pscustomobject]@{ Metric = 'Medium migration actions'; Value = $mediumCount; Meaning = 'Successful phone use with a phishing-resistant method registered, or phone preferred with a non-phone fallback.' }
+    [pscustomobject]@{ Metric = 'Low migration actions'; Value = $lowCount; Meaning = 'Phone registered but not preferred or used, with a non-phone method available.' }
     [pscustomobject]@{ Metric = 'Action rows missing registration data'; Value = $missingRegistrationCount; Meaning = 'Observed phone users not returned by the registration report; verify manually.' }
     [pscustomobject]@{ Metric = 'Sign-ins processed'; Value = $counters.SignInsProcessed; Meaning = 'Sign-in records read from Graph or the offline fixture.' }
     [pscustomobject]@{ Metric = 'Authentication steps processed'; Value = $counters.AuthenticationStepsProcessed; Meaning = 'Individual authentication steps included in usage aggregation.' }
@@ -1210,7 +1339,7 @@ $actionRowsForHtml = @($sortedMigrationActions | Select-Object -First $HtmlActio
 
 if ($actionRowsForHtml.Count -gt 0) {
     $actionHtml = $actionRowsForHtml |
-        Select-Object Risk, UserPrincipalName, UserDisplayName, IsAdmin, PhoneRegistered, UserPreferredMethod, SmsSuccessful, VoiceSuccessful, LastPhoneUseUtc, IsPasswordlessCapable, RecommendedAction |
+        Select-Object Risk, UserPrincipalName, UserDisplayName, IsAdmin, PhoneRegistered, UserPreferredMethod, SmsSuccessful, VoiceSuccessful, LastPhoneUseUtc, PhishingResistantRegistered, StrongNonPhoneRegistered, RecommendedAction |
         ConvertTo-Html -Fragment -PreContent ("<h2>Prioritized migration actions</h2><p>Showing {0} of {1} rows. See the CSV file for the complete list.</p>" -f $actionRowsForHtml.Count, $sortedMigrationActions.Count) |
         Out-String
 }
@@ -1241,7 +1370,7 @@ tr:nth-child(even) { background: #f7f7f7; }
 <body>
 <h1>Microsoft Entra Authentication Readiness Report</h1>
 <div class="callout">
-<strong>Priority population:</strong> $activePhoneUsersNotPasswordless users successfully used SMS or voice during the report period and were not reported as passwordless-capable.
+<strong>Priority population:</strong> $activePhoneUsersNoPhishingResistant users successfully used SMS or voice during the report period and have no phishing-resistant method (FIDO2, passkey, or Windows Hello for Business) registered.
 </div>
 $summaryHtml
 $riskHtml
@@ -1255,6 +1384,8 @@ $actionHtml
 <li>A previous MFA claim can satisfy a sign-in without a new authentication challenge.</li>
 <li>Authentication-Usage-Events.csv contains all recorded methods with user and UTC timestamps. PreviouslySatisfied rows represent token or claim reuse, not a fresh method challenge.</li>
 <li>No observed SMS or voice event does not prove the method is never used outside the available retention period.</li>
+<li>Only interactive user sign-ins are collected. SMS and voice challenges occur in interactive sign-ins, so telephony coverage is complete, but totals exclude non-interactive sign-ins.</li>
+<li>"Phishing-resistant" means FIDO2, a device-bound passkey, or Windows Hello for Business is registered. Authenticator phone sign-in is passwordless but is not treated as phishing-resistant.</li>
 <li>Review critical and high rows before changing any policy or deleting registered methods.</li>
 </ul>
 </div>
@@ -1279,7 +1410,7 @@ if ($IncludeEventDetails -and (Test-Path -LiteralPath $eventFilePath -PathType L
 }
 
 $manifest = [ordered]@{
-    SchemaVersion        = '1.0'
+    SchemaVersion        = '1.1'
     GeneratedDateTimeUtc = Format-UtcDateTime -Value (Get-Date).ToUniversalTime()
     InputMode            = $inputMode
     TenantId             = $tenantIdentifier
@@ -1295,7 +1426,7 @@ $manifest = [ordered]@{
         SuccessfulSmsUsers                     = $successfulSmsUsers
         SuccessfulVoiceUsers                   = $successfulVoiceUsers
         SuccessfulPhoneUsers                   = $successfulPhoneUsers
-        ActivePhoneUsersNotPasswordlessCapable = $activePhoneUsersNotPasswordless
+        ActivePhoneUsersNoPhishingResistant = $activePhoneUsersNoPhishingResistant
         AdministratorPhoneUsers                = $adminPhoneUsers
         Critical                               = $criticalCount
         High                                   = $highCount
@@ -1314,7 +1445,7 @@ Write-Information -MessageData 'Report completed successfully.' -InformationActi
 Write-Information -MessageData "Output directory: $resolvedOutputPath" -InformationAction Continue
 Write-Information -MessageData "Critical actions: $criticalCount" -InformationAction Continue
 Write-Information -MessageData "High actions: $highCount" -InformationAction Continue
-Write-Information -MessageData "Active SMS/voice users not passwordless-capable: $activePhoneUsersNotPasswordless" -InformationAction Continue
+Write-Information -MessageData "Active SMS/voice users without a phishing-resistant method: $activePhoneUsersNoPhishingResistant" -InformationAction Continue
 
 [pscustomobject]@{
     OutputPath                              = $resolvedOutputPath
@@ -1323,7 +1454,7 @@ Write-Information -MessageData "Active SMS/voice users not passwordless-capable:
     RegistrationRecords                    = $registrationRecords.Count
     SignInsProcessed                       = $counters.SignInsProcessed
     AuthenticationStepsProcessed           = $counters.AuthenticationStepsProcessed
-    ActivePhoneUsersNotPasswordlessCapable = $activePhoneUsersNotPasswordless
+    ActivePhoneUsersNoPhishingResistant = $activePhoneUsersNoPhishingResistant
     CriticalActions                        = $criticalCount
     HighActions                            = $highCount
     HtmlReport                             = $htmlPath

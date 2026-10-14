@@ -99,7 +99,7 @@
       "IsInteractive": true,
       "AuthenticationDetails": [
         {
-          "AuthenticationMethod": "SMS",
+          "AuthenticationMethod": "Text message",
           "AuthenticationMethodDetail": "+XX XXXXXXX01",
           "AuthenticationStepDateTime": "2026-09-20T09:00:10Z",
           "AuthenticationStepRequirement": "Primary authentication",
@@ -107,7 +107,7 @@
           "AuthenticationStepResultDetail": "Incorrect code"
         },
         {
-          "AuthenticationMethod": "SMS",
+          "AuthenticationMethod": "Text message",
           "AuthenticationMethodDetail": "+XX XXXXXXX01",
           "AuthenticationStepDateTime": "2026-09-20T09:00:30Z",
           "AuthenticationStepRequirement": "Primary authentication",
@@ -127,7 +127,7 @@
       "IsInteractive": true,
       "AuthenticationDetails": [
         {
-          "AuthenticationMethod": "Voice",
+          "AuthenticationMethod": "Voice call",
           "AuthenticationMethodDetail": "+XX XXXXXXX02",
           "AuthenticationStepDateTime": "2026-09-21T10:00:15Z",
           "AuthenticationStepRequirement": "Multifactor authentication",
@@ -195,7 +195,7 @@
       "IsInteractive": true,
       "AuthenticationDetails": [
         {
-          "AuthenticationMethod": "Voice",
+          "AuthenticationMethod": "Phone call",
           "AuthenticationMethodDetail": "+XX XXXXXXX05",
           "AuthenticationStepDateTime": "2026-09-24T13:00:10Z",
           "AuthenticationStepRequirement": "Multifactor authentication",
