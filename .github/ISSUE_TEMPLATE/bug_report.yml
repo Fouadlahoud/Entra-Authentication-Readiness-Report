@@ -1,0 +1,58 @@
+name: Bug report
+description: Report a reproducible problem with the script or generated report.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve the project. Do not include tenant identifiers, user data, credentials, tokens, or generated reports.
+  - type: textarea
+    id: description
+    attributes:
+      label: Problem
+      description: Describe what happened and what you expected instead.
+      placeholder: A concise description using fictional or redacted data.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Provide the smallest reproducible example. Prefer offline mode and fictional data.
+      placeholder: |
+        1. Run ...
+        2. Open ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: input
+    id: powershell
+    attributes:
+      label: PowerShell version
+      description: Run `$PSVersionTable.PSVersion.ToString()` to obtain this value.
+      placeholder: "7.6.0"
+    validations:
+      required: true
+  - type: input
+    id: graph
+    attributes:
+      label: Microsoft Graph module versions
+      description: Include the Authentication and Reports module versions when the issue affects live mode.
+      placeholder: "Microsoft.Graph.Authentication 2.x; Microsoft.Graph.Reports 2.x"
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Sanitized diagnostics
+      description: Include only error text that you have reviewed and sanitized.
+      render: shell
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy confirmation
+      options:
+        - label: I have removed tenant identifiers, user data, credentials, access tokens, and authentication details.
+          required: true
+        - label: I searched existing issues before submitting this report.
+          required: true
