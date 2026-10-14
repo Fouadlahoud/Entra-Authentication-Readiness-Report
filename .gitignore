@@ -1,0 +1,24 @@
+# Generated report directories
+Entra-Authentication-Readiness-*/
+output/
+sample-output/
+
+# Generated report files
+**/Executive-Summary.csv
+**/Registration-Inventory.csv
+**/Authentication-Usage-By-User.csv
+**/Authentication-Method-Summary.csv
+**/SmsVoice-Migration-Actions.csv
+**/Authentication-Usage-Events.csv
+**/Entra-Authentication-Readiness-Report.html
+**/Report-Manifest.json
+
+# PowerShell and editor artifacts
+*.clixml
+*.log
+.vscode/
+.idea/
+
+# Operating system artifacts
+.DS_Store
+Thumbs.db

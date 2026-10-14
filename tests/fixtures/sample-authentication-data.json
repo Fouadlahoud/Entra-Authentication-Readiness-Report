@@ -1,0 +1,219 @@
+{
+  "tenantId": "offline-test-tenant",
+  "reportEndUtc": "2026-10-01T00:00:00Z",
+  "registrationDetails": [
+    {
+      "Id": "user-alice",
+      "UserPrincipalName": "alice@example.com",
+      "UserDisplayName": "Alice Example",
+      "UserType": "member",
+      "IsAdmin": false,
+      "IsMfaRegistered": true,
+      "IsMfaCapable": true,
+      "IsPasswordlessCapable": false,
+      "IsSsprRegistered": true,
+      "IsSsprCapable": true,
+      "MethodsRegistered": [
+        "mobilePhone",
+        "microsoftAuthenticatorPush"
+      ],
+      "UserPreferredMethodForSecondaryAuthentication": "sms",
+      "SystemPreferredAuthenticationMethods": [
+        "sms"
+      ],
+      "LastUpdatedDateTime": "2026-09-01T10:00:00Z"
+    },
+    {
+      "Id": "user-bob",
+      "UserPrincipalName": "bob@example.com",
+      "UserDisplayName": "Bob Example",
+      "UserType": "member",
+      "IsAdmin": true,
+      "IsMfaRegistered": true,
+      "IsMfaCapable": true,
+      "IsPasswordlessCapable": true,
+      "IsSsprRegistered": true,
+      "IsSsprCapable": true,
+      "MethodsRegistered": [
+        "mobilePhone",
+        "fido2SecurityKey"
+      ],
+      "UserPreferredMethodForSecondaryAuthentication": "voiceMobile",
+      "SystemPreferredAuthenticationMethods": [
+        "fido2SecurityKey"
+      ],
+      "LastUpdatedDateTime": "2026-09-02T10:00:00Z"
+    },
+    {
+      "Id": "user-carol",
+      "UserPrincipalName": "carol@example.com",
+      "UserDisplayName": "Carol Example",
+      "UserType": "member",
+      "IsAdmin": false,
+      "IsMfaRegistered": true,
+      "IsMfaCapable": true,
+      "IsPasswordlessCapable": false,
+      "IsSsprRegistered": true,
+      "IsSsprCapable": true,
+      "MethodsRegistered": [
+        "mobilePhone",
+        "microsoftAuthenticatorPush"
+      ],
+      "UserPreferredMethodForSecondaryAuthentication": "microsoftAuthenticatorPush",
+      "SystemPreferredAuthenticationMethods": [
+        "microsoftAuthenticatorPush"
+      ],
+      "LastUpdatedDateTime": "2026-09-03T10:00:00Z"
+    },
+    {
+      "Id": "user-dana",
+      "UserPrincipalName": "dana@example.com",
+      "UserDisplayName": "Dana Example",
+      "UserType": "member",
+      "IsAdmin": false,
+      "IsMfaRegistered": true,
+      "IsMfaCapable": true,
+      "IsPasswordlessCapable": true,
+      "IsSsprRegistered": true,
+      "IsSsprCapable": true,
+      "MethodsRegistered": [
+        "mobilePhone",
+        "windowsHelloForBusiness"
+      ],
+      "UserPreferredMethodForSecondaryAuthentication": "windowsHelloForBusiness",
+      "SystemPreferredAuthenticationMethods": [
+        "windowsHelloForBusiness"
+      ],
+      "LastUpdatedDateTime": "2026-09-04T10:00:00Z"
+    }
+  ],
+  "signIns": [
+    {
+      "Id": "signin-alice",
+      "CreatedDateTime": "2026-09-20T09:00:00Z",
+      "UserId": "user-alice",
+      "UserPrincipalName": "alice@example.com",
+      "UserDisplayName": "Alice Example",
+      "AppDisplayName": "Example Portal",
+      "ResourceDisplayName": "Microsoft Graph",
+      "IsInteractive": true,
+      "AuthenticationDetails": [
+        {
+          "AuthenticationMethod": "SMS",
+          "AuthenticationMethodDetail": "+XX XXXXXXX01",
+          "AuthenticationStepDateTime": "2026-09-20T09:00:10Z",
+          "AuthenticationStepRequirement": "Primary authentication",
+          "Succeeded": false,
+          "AuthenticationStepResultDetail": "Incorrect code"
+        },
+        {
+          "AuthenticationMethod": "SMS",
+          "AuthenticationMethodDetail": "+XX XXXXXXX01",
+          "AuthenticationStepDateTime": "2026-09-20T09:00:30Z",
+          "AuthenticationStepRequirement": "Primary authentication",
+          "Succeeded": true,
+          "AuthenticationStepResultDetail": "Correct code"
+        }
+      ]
+    },
+    {
+      "Id": "signin-bob",
+      "CreatedDateTime": "2026-09-21T10:00:00Z",
+      "UserId": "user-bob",
+      "UserPrincipalName": "bob@example.com",
+      "UserDisplayName": "Bob Example",
+      "AppDisplayName": "Admin Center",
+      "ResourceDisplayName": "Microsoft Graph",
+      "IsInteractive": true,
+      "AuthenticationDetails": [
+        {
+          "AuthenticationMethod": "Voice",
+          "AuthenticationMethodDetail": "+XX XXXXXXX02",
+          "AuthenticationStepDateTime": "2026-09-21T10:00:15Z",
+          "AuthenticationStepRequirement": "Multifactor authentication",
+          "Succeeded": true,
+          "AuthenticationStepResultDetail": "Call approved"
+        }
+      ]
+    },
+    {
+      "Id": "signin-carol",
+      "CreatedDateTime": "2026-09-22T11:00:00Z",
+      "UserId": "user-carol",
+      "UserPrincipalName": "carol@example.com",
+      "UserDisplayName": "Carol Example",
+      "AppDisplayName": "Example Portal",
+      "ResourceDisplayName": "Microsoft Graph",
+      "IsInteractive": true,
+      "AuthenticationDetails": [
+        {
+          "AuthenticationMethod": "Microsoft Authenticator",
+          "AuthenticationMethodDetail": "Push notification",
+          "AuthenticationStepDateTime": "2026-09-22T11:00:10Z",
+          "AuthenticationStepRequirement": "Multifactor authentication",
+          "Succeeded": true,
+          "AuthenticationStepResultDetail": "Notification approved"
+        }
+      ]
+    },
+    {
+      "Id": "signin-dana",
+      "CreatedDateTime": "2026-09-23T12:00:00Z",
+      "UserId": "user-dana",
+      "UserPrincipalName": "dana@example.com",
+      "UserDisplayName": "Dana Example",
+      "AppDisplayName": "Example Portal",
+      "ResourceDisplayName": "Microsoft Graph",
+      "IsInteractive": true,
+      "AuthenticationDetails": [
+        {
+          "AuthenticationMethod": "Windows Hello for Business",
+          "AuthenticationMethodDetail": "Device-bound key",
+          "AuthenticationStepDateTime": "2026-09-23T12:00:05Z",
+          "AuthenticationStepRequirement": "Primary authentication",
+          "Succeeded": true,
+          "AuthenticationStepResultDetail": "Authentication completed"
+        },
+        {
+          "AuthenticationMethod": "SMS",
+          "AuthenticationMethodDetail": "+XX XXXXXXX04",
+          "AuthenticationStepDateTime": "2026-09-23T12:00:20Z",
+          "AuthenticationStepRequirement": "Multifactor authentication",
+          "Succeeded": true,
+          "AuthenticationStepResultDetail": "Correct code"
+        }
+      ]
+    },
+    {
+      "Id": "signin-eve",
+      "CreatedDateTime": "2026-09-24T13:00:00Z",
+      "UserId": "user-eve",
+      "UserPrincipalName": "eve@example.com",
+      "UserDisplayName": "Eve Example",
+      "AppDisplayName": "Example Portal",
+      "ResourceDisplayName": "Microsoft Graph",
+      "IsInteractive": true,
+      "AuthenticationDetails": [
+        {
+          "AuthenticationMethod": "Voice",
+          "AuthenticationMethodDetail": "+XX XXXXXXX05",
+          "AuthenticationStepDateTime": "2026-09-24T13:00:10Z",
+          "AuthenticationStepRequirement": "Multifactor authentication",
+          "Succeeded": false,
+          "AuthenticationStepResultDetail": "Call not answered"
+        }
+      ]
+    },
+    {
+      "Id": "signin-no-details",
+      "CreatedDateTime": "2026-09-25T14:00:00Z",
+      "UserId": "user-carol",
+      "UserPrincipalName": "carol@example.com",
+      "UserDisplayName": "Carol Example",
+      "AppDisplayName": "Background Service",
+      "ResourceDisplayName": "Microsoft Graph",
+      "IsInteractive": false,
+      "AuthenticationDetails": []
+    }
+  ]
+}
