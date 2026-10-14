@@ -118,12 +118,17 @@ Authentication method details can contain personal information, such as a partia
 
 ## Migration priority logic
 
+Two registration-derived flags drive the priority:
+
+- **Phishing-resistant registered** — FIDO2 security key, device-bound passkey (Authenticator or Windows Hello), or Windows Hello for Business is registered. The `IsPasswordlessCapable` flag is reported but not used for prioritization, because Authenticator phone sign-in is passwordless without being phishing-resistant.
+- **Strong non-phone registered** — any of the above, or Microsoft Authenticator (push or passwordless), software OTP, or hardware OTP. This means the user can satisfy MFA without SMS or voice.
+
 | Priority | Condition |
 | --- | --- |
-| Critical | Successful SMS or voice use and the user is not reported as passwordless-capable. |
-| High | An administrator successfully used SMS or voice, or a user has phone authentication registered or preferred without passwordless capability. |
-| Medium | Successful SMS or voice use and an existing passwordless-capable method is reported. |
-| Low | Phone authentication is registered, preferred, or observed without successful phone use during the report period. |
+| Critical | An administrator successfully used SMS or voice, or any user successfully used SMS or voice without a phishing-resistant method registered. |
+| High | Phone is the only registered MFA method (no strong non-phone method), or an administrator has phone registered or preferred without a phishing-resistant method. |
+| Medium | Successful SMS or voice use with a phishing-resistant method registered, or phone is the preferred method but a non-phone fallback exists and no phishing-resistant method is registered. |
+| Low | Phone is registered but neither preferred nor successfully used, and a non-phone method is available; or only failed phone attempts were observed. |
 
 Treat these priorities as investigation guidance rather than automated remediation decisions. Validate each user's sign-in and recovery journeys before changing policy or removing a method.
 
@@ -135,6 +140,9 @@ Treat these priorities as investigation guidance rather than automated remediati
 - A previous MFA claim can satisfy a sign-in without a new authentication challenge.
 - No observed SMS or voice event does not prove that the method is never used outside the available retention period.
 - `PreviouslySatisfied` event rows represent token or claim reuse, not a fresh authentication-method challenge.
+- Live mode reads interactive user sign-ins only. SMS and voice challenges occur in interactive sign-ins, so telephony coverage is complete, but totals exclude non-interactive and service principal sign-ins.
+- Telephony steps are matched by method name (`SMS`, `Text message`, `Voice`, `Voice call`, `Phone call`, and similar). The `TelephonyType` column in the event export shows which steps were classified; a warning is written if steps were processed but none matched.
+- When more than 7 days are requested and data is only returned for the last 7 days, a warning notes that the tenant is likely on Entra ID Free retention.
 
 See the Microsoft Graph documentation for [authentication-method registration details](https://learn.microsoft.com/graph/api/authenticationmethodsroot-list-userregistrationdetails) and [sign-in records](https://learn.microsoft.com/graph/api/signin-list).
 
