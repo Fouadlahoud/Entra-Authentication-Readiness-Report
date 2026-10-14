@@ -2,14 +2,14 @@
 
 [![Validate](https://github.com/fredlahoud/Entra-Authentication-Readiness-Report/actions/workflows/validate.yml/badge.svg)](https://github.com/fredlahoud/Entra-Authentication-Readiness-Report/actions/workflows/validate.yml)
 [![PowerShell 5.1+](https://img.shields.io/badge/PowerShell-5.1%2B-5391FE?logo=powershell&logoColor=white)](https://learn.microsoft.com/powershell/)
-[![License: LHIT](https://img.shields.io/badge/License-LHIT-yellow.svg)](LICENSE)
+[![License: LHIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A read-only PowerShell reporting tool that helps Microsoft Entra administrators understand authentication-method readiness and prioritize migration away from SMS and voice authentication.
 
 The script combines authentication-method registration data with observed sign-in authentication steps, then produces CSV reports, an executive HTML summary, and a machine-readable manifest.
 
 > [!IMPORTANT]
-> The generated reports contain identity and authentication-usage data. Store them securely, restrict access, and never comLHIT real tenant reports to source control.
+> The generated reports contain identity and authentication-usage data. Store them securely, restrict access, and never comMIT real tenant reports to source control.
 
 ## What it does
 
@@ -67,7 +67,7 @@ The output directory must either not exist or be empty. On first use, Microsoft 
     -OutputPath .\output
 ```
 
-Device-code sign-in can be blocked by tenant policy. OLHIT `-UseDeviceCode` to use the standard interactive sign-in flow.
+Device-code sign-in can be blocked by tenant policy. OMIT `-UseDeviceCode` to use the standard interactive sign-in flow.
 
 ### Reduce query-window size
 
@@ -127,7 +127,7 @@ Authentication method details can contain personal information, such as a partia
 
 Treat these priorities as investigation guidance rather than automated remediation decisions. Validate each user's sign-in and recovery journeys before changing policy or removing a method.
 
-## Data interpretation and liLHITations
+## Data interpretation and liMITations
 
 - Authentication policy scope, method registration, and observed method use are different measurements.
 - Registration reporting can be delayed by up to 36 hours and excludes disabled users.
@@ -173,6 +173,6 @@ Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before openin
 
 ## License
 
-This project is licensed under the [LHIT License](LICENSE).
+This project is licensed under the [MIT License](LICENSE).
 
 Microsoft, Microsoft Entra, and Microsoft Graph are trademarks of the Microsoft group of companies. This project is independently maintained and is not an official Microsoft product.
