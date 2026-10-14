@@ -81,14 +81,14 @@ Runs the script without Microsoft Graph by reading registrationDetails,
 signIns, reportEndUtc, and tenantId from a JSON fixture.
 
 .EXAMPLE
-.\Get-EntraAuthenticationReadinessReport.ps1 -TenantId contoso.onmicrosoft.com
+.\Get-EntraAuthenticationReadinessReport.ps1 -TenantId YourDomain.onmicrosoft.com
 
 Connects to Microsoft Graph and creates a 30-day readiness report.
 
 .EXAMPLE
 .\Get-EntraAuthenticationReadinessReport.ps1 `
     -TenantId 00000000-0000-0000-0000-000000000000 `
-    -LoginHint analyst@contoso.com `
+    -LoginHint analyst@YourDomain.com `
     -ForceSignIn `
     -UseDeviceCode `
     -OutputPath .\Customer-Authentication-Report
@@ -100,7 +100,7 @@ that case omit UseDeviceCode and use the normal interactive sign-in.
 
 .EXAMPLE
 .\Get-EntraAuthenticationReadinessReport.ps1 `
-    -TenantId contoso.onmicrosoft.com `
+    -TenantId YourDomain.onmicrosoft.com `
     -LookbackDays 14 `
     -WindowHours 6 `
     -IncludeEventDetails
