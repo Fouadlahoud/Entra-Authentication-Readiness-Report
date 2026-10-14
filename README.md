@@ -50,7 +50,7 @@ Run a 30-day report by using a verified tenant domain:
 
 ```powershell
 .\Get-EntraAuthenticationReadinessReport.ps1 `
-    -TenantId contoso.onmicrosoft.com `
+    -TenantId YourDomain.onmicrosoft.com `
     -OutputPath .\output
 ```
 
@@ -60,8 +60,8 @@ The output directory must either not exist or be empty. On first use, Microsoft 
 
 ```powershell
 .\Get-EntraAuthenticationReadinessReport.ps1 `
-    -TenantId contoso.onmicrosoft.com `
-    -LoginHint analyst@contoso.com `
+    -TenantId YourDomain.onmicrosoft.com `
+    -LoginHint analyst@YourDomain.com `
     -UseDeviceCode `
     -ForceSignIn `
     -OutputPath .\output
@@ -75,7 +75,7 @@ For a large tenant, reduce the Graph query window:
 
 ```powershell
 .\Get-EntraAuthenticationReadinessReport.ps1 `
-    -TenantId contoso.onmicrosoft.com `
+    -TenantId YourDomain.onmicrosoft.com `
     -LookbackDays 14 `
     -WindowHours 6 `
     -OutputPath .\output
@@ -87,7 +87,7 @@ Event-level export is enabled by default. Disable it for a smaller, summary-only
 
 ```powershell
 .\Get-EntraAuthenticationReadinessReport.ps1 `
-    -TenantId contoso.onmicrosoft.com `
+    -TenantId YourDomain.onmicrosoft.com `
     -IncludeEventDetails:$false `
     -OutputPath .\output
 ```
@@ -96,7 +96,7 @@ Authentication method details can contain personal information, such as a partia
 
 ```powershell
 .\Get-EntraAuthenticationReadinessReport.ps1 `
-    -TenantId contoso.onmicrosoft.com `
+    -TenantId YourDomain.onmicrosoft.com `
     -IncludeMethodDetails `
     -OutputPath .\output
 ```
