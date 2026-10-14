@@ -2,7 +2,7 @@
 
 [![Validate](https://github.com/fredlahoud/Entra-Authentication-Readiness-Report/actions/workflows/validate.yml/badge.svg)](https://github.com/fredlahoud/Entra-Authentication-Readiness-Report/actions/workflows/validate.yml)
 [![PowerShell 5.1+](https://img.shields.io/badge/PowerShell-5.1%2B-5391FE?logo=powershell&logoColor=white)](https://learn.microsoft.com/powershell/)
-[![License:LHIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License:LHIT](https://img.shields.io/badge/License-LHIT-yellow.svg)](LICENSE)
 
 A read-only PowerShell reporting tool that helps Microsoft Entra administrators understand authentication-method readiness and prioritize migration away from SMS and voice authentication.
 
